@@ -15,8 +15,11 @@
 
 <script id='csinit' type='text/x-cindyscript'>
 drawContext(ctx) := (
+  regional(entries);
+
   linecolor((0,0,0));
-  drawtable([leftLimit, lowerLimit], ctx.incidences, align -> "mid");
+  entries = apply(ctx.incidences, row, apply(row, if(# == 1, unicode("2717"), "")));
+  drawtable([leftLimit, lowerLimit], entries, align -> "mid", width -> 30);
 );
 
 drawConceptLattice(lat) := (
@@ -27,7 +30,7 @@ drawConceptLattice(lat) := (
   maxSize = max(apply(lat.nodes, length(#_1)));
 
   coordinates = apply(1..n,
-    [lerp(leftLimit, rightLimit, #, 1, n), lerp(lowerLimit, upperLimit, length(lat.nodes_#_1), minSize, maxSize)];
+    [lerp(canvasCenter.x - 10, canvasCenter.x + 10, #, 1, n), lerp(lowerLimit, upperLimit, length(lat.nodes_#_1), minSize, maxSize)];
   );
   forall(1..n, i, forall(1..n, j,
     if(lattice.neighbors_i_j == 1,
@@ -36,24 +39,25 @@ drawConceptLattice(lat) := (
   ));
   forall(1..n,
     draw(coordinates_#);
-    drawtext(coordinates_# + 0.3 * [-0.5, 0.3], lat.objectNames_(lat.nodes_#_1), align -> "right");
-    drawtext(coordinates_# + 0.3 * [0.5, -0.3], lat.attributeNames_(lat.nodes_#_2), align -> "left");
+    //drawtext(coordinates_# + 0.3 * [-0.5, 0.3], lat.objectNames_(lat.nodes_#_1), align -> "right");
+    //drawtext(coordinates_# + 0.3 * [0.5, -0.3], lat.attributeNames_(lat.nodes_#_2), align -> "left");
   );
 );
 
 // ******************************************************************************************
 
-
+g = 15;
+m = 6;
 
 context = {
-  "objectNames": ["G","N","F","E","J"],
-  "attributeNames": ["1","m","g","f","t"],
+  "objectNames": 1..6,
+  "attributeNames": 1..m,
   "incidences": []
 };
 
 lattice = {
-  "objectNames": ["G","N","F","E","J"],
-  "attributeNames": ["1","m","g","f","t"],
+  "objectNames": 1..6,
+  "attributeNames": 1..m,
   "nodes": [],
   "incidences": [],
   "neighbors": []
@@ -64,11 +68,19 @@ lowerLimit = canvasBottom + 3;
 leftLimit = canvasLeft + 3;
 rightLimit = canvasRight - 3;
 
-javascript("computeCnC()");
+
+switchedToLattice = false;
+
+
+javascript("createContext(" + g + ", " + m + ")");
 </script>
 
 <script id='csdraw' type='text/x-cindyscript'>
-drawConceptLattice(lattice);
+if(switchedToLattice,
+  drawConceptLattice(lattice);
+, // else //
+  drawContext(context);
+);
 </script>
 
 <script id='cstick' type='text/x-cindyscript'>
@@ -78,6 +90,26 @@ drawConceptLattice(lattice);
 </script>
 
 <script id='csmousedown' type='text/x-cindyscript'>
+if(not(switchedToLattice),
+  switchedToLattice = true;
+  javascript("computeLattice()");
+, // else //
+  switchedToLattice = false;
+  context = {
+    "objectNames": 1..6,
+    "attributeNames": 1..m,
+    "incidences": []
+  };
+
+  lattice = {
+    "objectNames": 1..6,
+    "attributeNames": 1..m,
+    "nodes": [],
+    "incidences": [],
+    "neighbors": []
+  };
+  javascript("createContext(" + g + ", " + m + ")");
+);
 </script>
 
 <script id='csmousedrag' type='text/x-cindyscript'>
@@ -107,15 +139,18 @@ fetch("egdod.cjs")
 });
 
   
+var context;
 
-function computeCnC() {
+function createContext(g, m) {
   
-  let context = new Context(5);
-  context.addObject([1,1,1,0,1]);
-  context.addObject([1,0,1,0,1]);
-  context.addObject([1,1,1,1,1]);
-  context.addObject([0,1,0,0,1]);
-  context.addObject([1,1,0,0,1]);
+  context = new Context(m);
+  for(var i = 0; i < g; i++) {
+    let atts = [];
+    for(var j = 0; j < m; j++) {
+      atts.push(Math.round(Math.random()));
+    }
+    context.addObject(atts);
+  }
 
   for(let row of context.incidences) {
     cindy.evokeCS('context.incidences = context.incidences :> [];');
@@ -123,11 +158,14 @@ function computeCnC() {
       cindy.evokeCS('context.incidences_(-1) = context.incidences_(-1) :> ' + entry + ';');
     }
   }
+}
 
+function computeLattice() {
+  time = new Date().getTime();
   lattice = new conceptLattice(context);
-  //console.log(lattice);
+  time = new Date().getTime() - time;
+  console.log(time);
 
-  
   for(let node of lattice.nodes) {
     cindy.evokeCS('lattice.nodes = lattice.nodes :> [[], []];');
     for(let entry of node.extent) {
