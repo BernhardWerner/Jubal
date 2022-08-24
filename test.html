@@ -47,7 +47,7 @@ drawConceptLattice(lat) := (
 // ******************************************************************************************
 
 g = 15;
-m = 6;
+m = 20;
 
 context = {
   "objectNames": 1..6,
@@ -161,11 +161,12 @@ function createContext(g, m) {
 }
 
 function computeLattice() {
-  time = new Date().getTime();
+  timeA = new Date().getTime();
   lattice = new conceptLattice(context);
-  time = new Date().getTime() - time;
-  console.log(time);
+  timeB = new Date().getTime();
+  console.log("Time for extents: " + (timeB - timeA) + "ms");
 
+  timeC = new Date().getTime();
   for(let node of lattice.nodes) {
     cindy.evokeCS('lattice.nodes = lattice.nodes :> [[], []];');
     for(let entry of node.extent) {
@@ -187,6 +188,8 @@ function computeLattice() {
       cindy.evokeCS('lattice.neighbors_(-1) = lattice.neighbors_(-1) :> ' + entry + ';');
     }
   }
+  timeD = new Date().getTime();
+  console.log("Time for tranfering data: " + (timeD - timeC) + "ms");
 }
 
 </script>
