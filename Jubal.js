@@ -179,22 +179,38 @@ class conceptLattice {
 
         // An array of size n times n filled with zeros.
         this.incidences = [];
+        this.neighbors = [];
         for(let i = 0; i < n; i++) {
             this.incidences.push([]);
+            this.neighbors.push([]);
             for(let j = 0; j < n; j++) {
                 this.incidences[i].push(0);
+                this.neighbors[i].push(null);
             }
         }
 
         for(let i = 0; i < n; i++) {
             this.nodes.push(new conceptNode(extents[i], context.intent(extents[i])));
             for(let j = 0; j < n; j++) {
-                if(subset(extents[i], extents[j]) || subset(extents[j], extents[i])) {
+                if(i !== j && subset(extents[i], extents[j])) {
                     this.incidences[i][j] = 1;
-                    this.incidences[j][i] = 1;
                 }
             }
-        }    
+        }
+
+        for(let i = 0; i < n; i++) {
+            for(let j = 0; j < n; j++) {
+                if(this.incidences[i][j] === 1) {
+                    let inBetween = false;
+                    for(let k = 0; k < n; k++) {
+                        inBetween = inBetween || (this.incidences[i][k] === 1 && this.incidences[k][j] === 1);
+                    }
+                    if(!inBetween) {
+                        this.neighbors[i][j] = 1;
+                    }
+                }
+            }
+        }
     }
 }
 
