@@ -15,6 +15,27 @@
 
 
 <script>
+let context = new Context(5);
+context.addObject([1,1,1,0,1]);
+context.addObject([1,0,1,0,1]);
+context.addObject([1,1,1,1,1]);
+context.addObject([0,1,0,0,1]);
+context.addObject([1,1,0,0,1]);
+
+objectNames = ["G","N","F","E","J"];
+attributeNames = ["1","m","g","f","t"];
+
+
+//console.log(context.nextExtent([0,2,4]));
+
+
+lattice = new conceptLattice(context);
+for(let n of lattice.nodes) {
+  //console.log(n.extent, n.intent);
+  console.log(n.extent.map(i => objectNames[i]), n.intent.map(i => attributeNames[i]));
+};
+
+
 
 </script>
 

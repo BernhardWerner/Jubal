@@ -1,5 +1,3 @@
-console.log("Starting Jubal.js");
-
 class Context {
     constructor(numberOfAttributes) {
         this.numberOfAttributes = numberOfAttributes;
@@ -64,6 +62,7 @@ class Context {
                 result.push(i);
             }
         }
+        return result;
     }
 
     attributeExtent(att) {
@@ -77,12 +76,15 @@ class Context {
                 result.push(i);
             }
         }
+        return result;
     }
 
     intent(objs) {
+        if(objs.length === 0) return range(0, this.numberOfAttributes);
+
         let intents = [];
-        for(o of objs) {
-            intents.push(this.objectIntent(o));
+        for(let i = 0; i < objs.length; i++) {
+            intents.push(this.objectIntent(objs[i]));
         }
         let result = intents[0];
         for(let i = 1; i < intents.length; i++) {
@@ -92,8 +94,10 @@ class Context {
     }
 
     extent(atts) {
+        if(atts.length === 0) return range(0, this.numberOfObjects);
+
         let extents = [];
-        for(a of atts) {
+        for(let a of atts) {
             extents.push(this.attributeExtent(a));
         }
         let result = extents[0];
@@ -111,52 +115,99 @@ class Context {
         return this.extent(this.intent(objs));
     }
 
-    smaller(objsA, index, objsB) {
+    _smaller(objsA, index, objsB) {
         // check if index is in objsB, but not in objsA
         let firstCheck = objsB.includes(index) && !objsA.includes(index);
-        if !firstCheck return false;
+        if(!firstCheck) return false;
 
-        // check if the elements of objsA smaller than index and the elements of objsB that are smaller than index are the same
-        let secondCheck = objsA.filter(o => o < index).every(o => objsB.filter(o => o < index).includes(o));
-        return secondCheck;
+        //let secondCheck = objsA.filter(o => o < index).every(o => objsB.filter(k => k < index).includes(o));
+        let smallerA = objsA.filter(o => o < index);
+        let smallerB = objsB.filter(o => o < index);
+        return smallerA.length === smallerB.length && smallerA.every(o => smallerB.includes(o));
     }
 
-    oPlus(objs, index) {
-        return this.extentHull(obj.filter(o => objs.indexOf(o) < index).push(index));
+    _oPlus(objs, index) {
+        objs = objs.filter(o => o < index).concat([index])
+        return this.extentHull(objs);
     }
 
     nextExtent(givenExtent) {
-        // all indices from 1 to object.length that are not in givenExtent
+        // all indices from 0 to object.length that are not in givenExtent
         let leftovers = [];
-        for(let i = 1; i < this.numberOfObjects; i++) {
+        for(let i = 0; i < this.numberOfObjects; i++) {
             if(!givenExtent.includes(i)) {
                 leftovers.push(i);
             }
         }
 
-        let result = [];
-        for(l of leftovers.reverse()) {
-            result =this.oPlus(givenExtent, l);
-            if(this.smaller(givenExtent, l, result)) {
-                return result;
+        leftovers = leftovers.reverse();
+        for(let l of leftovers) {
+            let candidate = this._oPlus(givenExtent, l);
+            if(this._smaller(givenExtent, l, candidate)) {
+                return candidate;
             }
         }
-        return result;
     }
 
     computeAllExtents() {
-        result = [this.extentHull([])];
+        let result = [this.extentHull([])];
         let finished = false;
         while(!finished) {
             let next = this.nextExtent(result[result.length - 1]);
-            if(next.length === 0) {
-                finished = true;
-            } else {
-                result.push(next);
-            }
+            result.push(next);
+            finished = next.length === this.numberOfObjects;
         }
+        return result;
     }
 }
 
 
+// *********************************************************************************************
 
+class conceptNode {
+    constructor(extent, intent) {
+        this.extent = extent;
+        this.intent = intent;
+    }
+}
+
+class conceptLattice {
+    constructor(context) {
+        let extents = context.computeAllExtents();
+        let n = extents.length;
+        this.nodes = [];
+
+        // An array of size n times n filled with zeros.
+        this.incidences = [];
+        for(let i = 0; i < n; i++) {
+            this.incidences.push([]);
+            for(let j = 0; j < n; j++) {
+                this.incidences[i].push(0);
+            }
+        }
+
+        for(let i = 0; i < n; i++) {
+            this.nodes.push(new conceptNode(extents[i], context.intent(extents[i])));
+            for(let j = 0; j < n; j++) {
+                if(subset(extents[i], extents[j]) || subset(extents[j], extents[i])) {
+                    this.incidences[i][j] = 1;
+                    this.incidences[j][i] = 1;
+                }
+            }
+        }    
+    }
+}
+
+// *********************************************************************************************
+
+function range(start, end) {
+    let result = [];
+    for(let i = start; i < end; i++) {
+        result.push(i);
+    }
+    return result;
+}
+
+function subset(setA, setB) {
+    return setA.every(x => setB.includes(x));
+}
