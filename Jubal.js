@@ -164,18 +164,13 @@ class Context {
 
 // *********************************************************************************************
 
-class conceptNode {
-    constructor(extent, intent) {
-        this.extent = extent;
-        this.intent = intent;
-    }
-}
+
 
 class conceptLattice {
     constructor(context) {
         let extents = context.computeAllExtents();
+        let intents = extents.map(e => context.intent(e));
         let n = extents.length;
-        this.nodes = [];
 
         // An array of size n times n filled with zeros.
         this.incidences = [];
@@ -185,12 +180,33 @@ class conceptLattice {
             this.neighbors.push([]);
             for(let j = 0; j < n; j++) {
                 this.incidences[i].push(0);
-                this.neighbors[i].push(null);
+                this.neighbors[i].push(0);
             }
         }
 
+        this.extents = [];
+        this.intents = [];
         for(let i = 0; i < n; i++) {
-            this.nodes.push(new conceptNode(extents[i], context.intent(extents[i])));
+            let nextExtent = [];
+            for(let j = 0; j < context.numberOfObjects; j++) {
+                if(extents[i].includes(j)) {
+                    nextExtent.push(1);
+                } else {
+                    nextExtent.push(0);
+                }
+            }
+            this.extents.push(nextExtent);
+
+            let nextIntent = [];
+            for(let j = 0; j < context.numberOfAttributes; j++) {
+                if(intents[i].includes(j)) {
+                    nextIntent.push(1);
+                } else {
+                    nextIntent.push(0);
+                }
+            }
+            this.intents.push(nextIntent);
+
             for(let j = 0; j < n; j++) {
                 if(i !== j && subset(extents[i], extents[j])) {
                     this.incidences[i][j] = 1;
