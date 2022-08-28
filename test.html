@@ -15,11 +15,32 @@
 
 <script id='csinit' type='text/x-cindyscript'>
 drawContext() := (
-  regional(entries);
+  regional(entries, entryGrid, hStep, vStep);
 
-  linecolor((0,0,0));
+  hStep = 5;
+  vStep = 1.5;
   entries = apply(contextIncidences, row, apply(row, if(# == 1, unicode("2717"), "")));
-  drawtable([leftLimit, lowerLimit], entries, align -> "mid", width -> 30);
+  entryGrid = grid(canvasCorners.tl + [7, -3], g, m, vStep, hStep);
+  
+  forall(1..g, i, forall(1..m, j,
+    drawtext(entryGrid_i_j, entries_i_j, size -> 20, align -> "mid");
+  ));
+  forall(1..g,
+    drawtext(canvasCorners.tl + [7, -3] + [-5, -(# - 1) * vStep], objectNames_#, size -> 20, align -> "mid");
+  );
+  forall(1..m,
+    drawtext(canvasCorners.tl + [7, -3] + [(# - 1) * hStep, 2], attributeNames_#, size -> 20, align -> "mid");
+  );
+);
+
+grid(tl, vNumber, hNumber, vStep, hStep) := (
+  regional(i, j);
+
+  apply(1..vNumber, j,
+    apply(1..hNumber, i,
+      tl + [(i - 1) * hStep, -(j - 1) * vStep];
+    );
+  );
 );
 
 drawConceptLattice() := (
@@ -30,7 +51,7 @@ drawConceptLattice() := (
   maxSize = max(apply(latticeExtents, sum(#)));
 
   coordinates = apply(1..n,
-    [lerp(canvasCenter.x - 10, canvasCenter.x + 10, #, 1, n), lerp(lowerLimit, upperLimit, sum(latticeExtents_#), minSize, maxSize)];
+    [lerp(canvasCenter.x - 8, canvasCenter.x + 8, #, 1, n), lerp(lowerLimit, upperLimit, sum(latticeExtents_#), minSize, maxSize)];
   );
   forall(1..n, i, forall(1..n, j,
     if(latticeNeighbors_i_j == 1,
@@ -49,8 +70,8 @@ drawConceptLattice() := (
 g = 15;
 m = 6;
 
-objectNames = 1..g;
-attributeNames = 1..m;
+objectNames = apply(1..g, "Object " + #);
+attributeNames = apply(1..m, "Attribute " + #);
 
 contextIncidences = [];
 
@@ -110,7 +131,7 @@ if(not(switchedToLattice),
 <script id='csmouseup' type='text/x-cindyscript'>
 </script>
 
-<canvas id="CSCanvas" align="left" valign="top" width="800" height="600" style="border:1px solid #000000;"></canvas>
+<canvas id="CSCanvas" align="left" valign="top" width="1024" height="768" style="border:1px solid #000000;"></canvas>
 
 
 
