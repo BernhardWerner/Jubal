@@ -19,17 +19,18 @@ drawContext() := (
 
   hStep = 5;
   vStep = 1.5;
+  tl = canvasCorners.tl + [15, -4];
   entries = apply(contextIncidences, row, apply(row, if(# == 1, unicode("2717"), "")));
-  entryGrid = grid(canvasCorners.tl + [7, -3], g, m, vStep, hStep);
+  entryGrid = grid(tl, g, m, vStep, hStep);
   
   forall(1..g, i, forall(1..m, j,
     drawtext(entryGrid_i_j, entries_i_j, size -> 20, align -> "mid");
   ));
   forall(1..g,
-    drawtext(canvasCorners.tl + [7, -3] + [-5, -(# - 1) * vStep], objectNames_#, size -> 20, align -> "mid");
+    drawtext(tl + [-4, -(# - 1) * vStep], objectNames_#, size -> 20, align -> "right");
   );
   forall(1..m,
-    drawtext(canvasCorners.tl + [7, -3] + [(# - 1) * hStep, 2], attributeNames_#, size -> 20, align -> "mid");
+    drawtext(tl + [(# - 1) * hStep, 2], attributeNames_#, size -> 20, align -> "mid");
   );
 );
 
@@ -44,34 +45,76 @@ grid(tl, vNumber, hNumber, vStep, hStep) := (
 );
 
 drawConceptLattice() := (
-  regional(n, minSize, maxSize, inBetweenNode);
+  regional(n, inBetweenNode);
 
   n = length(latticeExtents);
+
+  forall(1..n, i, forall(1..n, j,
+    if(latticeNeighbors_i_j == 1,
+      draw(latticeCoordinates_i, latticeCoordinates_j)
+    );
+  ));
+  forall(1..n, i,
+    draw(latticeCoordinates_i);
+    drawtext(latticeCoordinates_i + 0.3 * [-0.5, 0.3], objectNamesShort_(select(1..g, latticeExtents_i_# == 1)), align -> "right");
+    drawtext(latticeCoordinates_i + 0.3 * [0.5, -0.3], attributeNamesShort_(select(1..m, latticeIntents_i_# == 1)), align -> "left");
+  );
+);
+
+initilizeLatticeCoordinates() := (
+  regional(n, minSize, maxSize);
+  n = length(latticeExtents);
+
   minSize = min(apply(latticeExtents, sum(#)));
   maxSize = max(apply(latticeExtents, sum(#)));
 
-  coordinates = apply(1..n,
+  latticeCoordinates = apply(1..n,
     [lerp(canvasCenter.x - 8, canvasCenter.x + 8, #, 1, n), lerp(lowerLimit, upperLimit, sum(latticeExtents_#), minSize, maxSize)];
   );
-  forall(1..n, i, forall(1..n, j,
-    if(latticeNeighbors_i_j == 1,
-      draw(coordinates_i, coordinates_j)
-    );
-  ));
+);
+
+updateLatticeCoordinates(delta) := (
+  regional(n);
+
+  n = length(latticeExtents);
+
+  // This is so wrong, LMAO!
+  latticeCoordinates = transpose(latticeCoordinates);
+  latticeCoordinates_1 = forceMatrix * latticeCoordinates_1 * delta + latticeCoordinates_1;
+  latticeCoordinates = transpose(latticeCoordinates);
+
   forall(1..n,
-    draw(coordinates_#);
-    //drawtext(coordinates_# + 0.3 * [-0.5, 0.3], objectNames_(latticeExtents_#), align -> "right");
-    //drawtext(coordinates_# + 0.3 * [0.5, -0.3], attributeNames_(latticeIntents_#), align -> "left");
+    latticeCoordinates_# = [clamp(latticeCoordinates_#_1, leftLimit, rightLimit), clamp(latticeCoordinates_#_2, lowerLimit, upperLimit)];
   );
+);
+
+updateForceMatrix() := (
+  regional(n, distanceMatrix, inverseDistanceMatrix);
+
+  n = length(latticeExtents);
+
+  distanceMatrix = apply(1..n, i, apply(1..n, j,
+      dist(latticeCoordinates_i, latticeCoordinates_j);
+    ));
+  inverseDistanceMatrix = apply(1..n, i, apply(1..n, j,
+      if(i == j, 0, 
+        if(distanceMatrix_i_j ~= 0, 1000, 1 / distanceMatrix_i_j^2);
+      );
+    ));
+
+  forceMatrix = apply(1..n, i, apply(1..n, j, if(i == j, sum(inverseDistanceMatrix_i), -inverseDistanceMatrix_i_j))) * 0.3
+             + (apply(1..n, i, apply(1..n, j, if(latticeNeighbors_i_j == 1, distanceMatrix_i_j, 0))) - apply(1..n, i, apply(1..n, j, if(i == j, sum(distanceMatrix_i), 0)))) * 0.03;
 );
 
 // ******************************************************************************************
 
-g = 15;
-m = 6;
+g = 7;
+m = 5;
 
-objectNames = apply(1..g, "Object " + #);
-attributeNames = apply(1..m, "Attribute " + #);
+objectNames = ["Toyota Supra", "Nissan Skyline", "Mitsubishi Eclipse", "Mitsubishi Lancer Evolution", "Mazda RX-7", "Honda S2000", "Chevrolet Impala"];
+objectNamesShort = ["ts", "ns", "me", "mle", "mrx7", "hs", "ci"];
+attributeNames = ["Is white", "before 1980", "Japanese", "5 doors", "has sunroof"];
+attributeNamesShort = ["w", "80", "j", "5", "s"];
 
 contextIncidences = [];
 
@@ -79,6 +122,9 @@ latticeExtents = [];
 latticeIntents = [];
 latticeIncidences = [];
 latticeNeighbors = [];
+latticeCoordinates = [];
+forceMatrix = [];
+
 
 upperLimit = canvasTop - 3;
 lowerLimit = canvasBottom + 3;
@@ -90,7 +136,10 @@ switchedToLattice = false;
 
 test = [];
 
-javascript("createContext(" + g + ", " + m + ")");
+javascript("createCarContext()");
+
+setupTime();
+playanimation();
 </script>
 
 <script id='csdraw' type='text/x-cindyscript'>
@@ -102,6 +151,11 @@ if(switchedToLattice,
 </script>
 
 <script id='cstick' type='text/x-cindyscript'>
+delta = deltaTime();
+
+if(switchedToLattice,
+  updateLatticeCoordinates(delta);
+);
 </script>
 
 <script id='csmousemove' type='text/x-cindyscript'>
@@ -120,8 +174,11 @@ if(not(switchedToLattice),
   latticeIntents = [];
   latticeIncidences = [];
   latticeNeighbors = [];
+  latticeCoordinates = [];
+  forceMatrix = [];
 
-  javascript("createContext(" + g + ", " + m + ")");
+
+  javascript("createCarContext()");
 );
 </script>
 
@@ -168,6 +225,19 @@ function createContext(g, m) {
   
 }
 
+function createCarContext() {
+  context = new Context(5);
+  context.addObject([1, 1, 1, 0, 1]);
+  context.addObject([1, 1, 1, 1, 0]);
+  context.addObject([0, 0, 1, 0, 0]);
+  context.addObject([0, 0, 1, 1, 0]);
+  context.addObject([1, 1, 1, 0, 0]);
+  context.addObject([0, 0, 1, 0, 1]);
+  context.addObject([0, 1, 0, 1, 0]);
+
+  cindy.evokeCS('contextIncidences = ' + JSON.stringify(context.incidences) + ';');
+}
+
 function computeLattice() {
   timeA = new Date().getTime();
   lattice = new conceptLattice(context);
@@ -180,7 +250,8 @@ function computeLattice() {
   let command = 'latticeExtents = ' + JSON.stringify(lattice.extents) + ';' 
               + 'latticeIntents = ' + JSON.stringify(lattice.intents) + ';' 
               + 'latticeIncidences = ' + JSON.stringify(lattice.incidences) + ';' 
-              + 'latticeNeighbors = ' + JSON.stringify(lattice.neighbors) + ';';
+              + 'latticeNeighbors = ' + JSON.stringify(lattice.neighbors) + ';'
+              + 'initilizeLatticeCoordinates(); updateForceMatrix();';
   cindy.evokeCS(command);
   
   
