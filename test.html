@@ -47,7 +47,7 @@ grid(tl, vNumber, hNumber, vStep, hStep) := (
 drawConceptLattice() := (
   regional(n, inBetweenNode);
 
-  n = length(latticeExtents);
+  n = latticeSize;
 
   forall(1..n, i, forall(1..n, j,
     if(latticeNeighbors_i_j == 1,
@@ -62,49 +62,70 @@ drawConceptLattice() := (
 );
 
 initilizeLatticeCoordinates() := (
-  regional(n, minSize, maxSize);
-  n = length(latticeExtents);
+  regional(minSize, maxSize);
+
+  latticeSize = length(latticeExtents);
 
   minSize = min(apply(latticeExtents, sum(#)));
   maxSize = max(apply(latticeExtents, sum(#)));
 
-  latticeCoordinates = apply(1..n,
-    [lerp(canvasCenter.x - 8, canvasCenter.x + 8, #, 1, n), lerp(lowerLimit, upperLimit, sum(latticeExtents_#), minSize, maxSize)];
+  latticeLevels = apply(1..latticeSize,
+    lerp(lowerLimit, upperLimit, sum(latticeExtents_#), minSize, maxSize);
   );
+
+  latticeCoordinates = apply(1..latticeSize,
+    [lerp(canvasCenter.x - 8, canvasCenter.x + 8, #, 1, latticeSize), latticeLevels_#] + 0.01 * [random(), random()];
+  );
+
+  latticeVelocities = 0 * latticeCoordinates;
 );
+
+
+
 
 updateLatticeCoordinates(delta) := (
-  regional(n);
+  regional(forces, minSize, maxSize);
 
-  n = length(latticeExtents);
+  minSize = min(apply(latticeExtents, sum(#)));
+  maxSize = max(apply(latticeExtents, sum(#)));
 
-  // This is so wrong, LMAO!
-  latticeCoordinates = transpose(latticeCoordinates);
-  latticeCoordinates_1 = forceMatrix * latticeCoordinates_1 * delta + latticeCoordinates_1;
-  latticeCoordinates = transpose(latticeCoordinates);
 
-  forall(1..n,
-    latticeCoordinates_# = [clamp(latticeCoordinates_#_1, leftLimit, rightLimit), clamp(latticeCoordinates_#_2, lowerLimit, upperLimit)];
+  latticeCoordinates = latticeCoordinates + latticeVelocities * delta;
+
+  forces = apply(1..latticeSize, i, 
+    sum(apply(1..latticeSize, j,
+      if(i == j,
+        [0, 0];
+      , // else //
+        5 * (latticeCoordinates_i - latticeCoordinates_j) / dist(latticeCoordinates_i, latticeCoordinates_j)^3;
+      )
+
+      +
+
+      if(latticeNeighbors_i_j + latticeNeighbors_j_i >= 1,
+        0.03 * (latticeCoordinates_j - latticeCoordinates_i);
+      , // else //
+        [0, 0];
+      )
+    ))
+
+    + 
+
+    [0.0 * (canvasCenter.x - latticeCoordinates_i.x), 3 * if(abs(latticeLevels_i - latticeCoordinates_i.y) > 0.03, (latticeLevels_i - latticeCoordinates_i.y) / abs(latticeLevels_i - latticeCoordinates_i.y), 0)];
+  );
+
+  latticeVelocities = latticeVelocities + forces * delta;
+
+
+  forall(1..latticeSize,
+    latticeCoordinates_# = [clamp(latticeCoordinates_#.x, leftLimit, rightLimit), clamp(latticeCoordinates_#.y, lowerLimit, upperLimit)];
+    if(dist(latticeCoordinates_#.y, latticeLevels_#) < 0.03,
+      latticeCoordinates_#_2 = latticeLevels_#;
+      latticeVelocities_#_2 = 0;
+    );
   );
 );
 
-updateForceMatrix() := (
-  regional(n, distanceMatrix, inverseDistanceMatrix);
-
-  n = length(latticeExtents);
-
-  distanceMatrix = apply(1..n, i, apply(1..n, j,
-      dist(latticeCoordinates_i, latticeCoordinates_j);
-    ));
-  inverseDistanceMatrix = apply(1..n, i, apply(1..n, j,
-      if(i == j, 0, 
-        if(distanceMatrix_i_j ~= 0, 1000, 1 / distanceMatrix_i_j^2);
-      );
-    ));
-
-  forceMatrix = apply(1..n, i, apply(1..n, j, if(i == j, sum(inverseDistanceMatrix_i), -inverseDistanceMatrix_i_j))) * 0.3
-             + (apply(1..n, i, apply(1..n, j, if(latticeNeighbors_i_j == 1, distanceMatrix_i_j, 0))) - apply(1..n, i, apply(1..n, j, if(i == j, sum(distanceMatrix_i), 0)))) * 0.03;
-);
 
 // ******************************************************************************************
 
@@ -123,7 +144,11 @@ latticeIntents = [];
 latticeIncidences = [];
 latticeNeighbors = [];
 latticeCoordinates = [];
-forceMatrix = [];
+latticeVelocities = [];
+latticeSize = 0;
+latticeLevels = [];
+
+
 
 
 upperLimit = canvasTop - 3;
@@ -135,6 +160,9 @@ rightLimit = canvasRight - 3;
 switchedToLattice = false;
 
 test = [];
+
+runningPhysics = false;
+
 
 javascript("createCarContext()");
 
@@ -153,7 +181,7 @@ if(switchedToLattice,
 <script id='cstick' type='text/x-cindyscript'>
 delta = deltaTime();
 
-if(switchedToLattice,
+if(switchedToLattice & runningPhysics,
   updateLatticeCoordinates(delta);
 );
 </script>
@@ -166,6 +194,7 @@ if(not(switchedToLattice),
   switchedToLattice = true;
   javascript("computeLattice()");
 , // else //
+  /*
   switchedToLattice = false;
   
   contextIncidences = [];
@@ -175,17 +204,33 @@ if(not(switchedToLattice),
   latticeIncidences = [];
   latticeNeighbors = [];
   latticeCoordinates = [];
-  forceMatrix = [];
-
+  latticeVelocities = [];
+  latticeSize = 0;
+  latticeLevels = [];
 
   javascript("createCarContext()");
+  */
+
+  mouseDown = mouse();
+  closetPointIndex = sort(1..latticeSize, dist(mouseDown, latticeCoordinates_#))_1;
 );
 </script>
 
 <script id='csmousedrag' type='text/x-cindyscript'>
+if(switchedToLattice,
+  latticeCoordinates_closetPointIndex = latticeCoordinates_closetPointIndex + (mouse() - mouseDown);
+  mouseDown = mouse();
+);
+
+
 </script>
 
 <script id='csmouseup' type='text/x-cindyscript'>
+
+</script>
+
+<script id='cskeydown' type='text/x-cindyscript'>
+runningPhysics = not(runningPhysics);
 </script>
 
 <canvas id="CSCanvas" align="left" valign="top" width="1024" height="768" style="border:1px solid #000000;"></canvas>
@@ -246,12 +291,11 @@ function computeLattice() {
 
   timeC = new Date().getTime();
   
-  
   let command = 'latticeExtents = ' + JSON.stringify(lattice.extents) + ';' 
               + 'latticeIntents = ' + JSON.stringify(lattice.intents) + ';' 
               + 'latticeIncidences = ' + JSON.stringify(lattice.incidences) + ';' 
               + 'latticeNeighbors = ' + JSON.stringify(lattice.neighbors) + ';'
-              + 'initilizeLatticeCoordinates(); updateForceMatrix();';
+              + 'initilizeLatticeCoordinates();';
   cindy.evokeCS(command);
   
   
