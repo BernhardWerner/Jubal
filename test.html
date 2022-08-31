@@ -76,6 +76,8 @@ initilizeLatticeCoordinates() := (
   latticeCoordinates = apply(1..latticeSize,
     [lerp(canvasCenter.x - 8, canvasCenter.x + 8, #, 1, latticeSize), latticeLevels_#] + 0.01 * [random(), random()];
   );
+  latticeCoordinates_1_1 = canvasCenter.x;
+  latticeCoordinates_(-1)_1 = canvasCenter.x;
 
   latticeVelocities = 0 * latticeCoordinates;
 );
@@ -97,7 +99,7 @@ updateLatticeCoordinates(delta) := (
       if(i == j,
         [0, 0];
       , // else //
-        5 * (latticeCoordinates_i - latticeCoordinates_j) / dist(latticeCoordinates_i, latticeCoordinates_j)^3;
+        if(latticeLevels_i == latticeLevels_j, 15, 5) * (latticeCoordinates_i - latticeCoordinates_j) / dist(latticeCoordinates_i, latticeCoordinates_j)^3;
       )
 
       +
@@ -111,10 +113,12 @@ updateLatticeCoordinates(delta) := (
 
     + 
 
-    [0.0 * (canvasCenter.x - latticeCoordinates_i.x), 3 * if(abs(latticeLevels_i - latticeCoordinates_i.y) > 0.03, (latticeLevels_i - latticeCoordinates_i.y) / abs(latticeLevels_i - latticeCoordinates_i.y), 0)];
+    [0, 3 * if(abs(latticeLevels_i - latticeCoordinates_i.y) > 0.03, (latticeLevels_i - latticeCoordinates_i.y) / abs(latticeLevels_i - latticeCoordinates_i.y), 0)];
   );
 
-  latticeVelocities = latticeVelocities + forces * delta;
+  forces_1 = [0, 0];
+  forces_(-1) = [0, 0];
+  latticeVelocities = 0.98 * latticeVelocities + forces * delta;
 
 
   forall(1..latticeSize,
@@ -134,7 +138,7 @@ m = 5;
 
 objectNames = ["Toyota Supra", "Nissan Skyline", "Mitsubishi Eclipse", "Mitsubishi Lancer Evolution", "Mazda RX-7", "Honda S2000", "Chevrolet Impala"];
 objectNamesShort = ["ts", "ns", "me", "mle", "mrx7", "hs", "ci"];
-attributeNames = ["Is white", "before 1980", "Japanese", "5 doors", "has sunroof"];
+attributeNames = ["Wiki white", "before 1980", "Japanese", "5 doors", "has sunroof"];
 attributeNamesShort = ["w", "80", "j", "5", "s"];
 
 contextIncidences = [];
@@ -182,7 +186,7 @@ if(switchedToLattice,
 delta = deltaTime();
 
 if(switchedToLattice & runningPhysics,
-  updateLatticeCoordinates(delta);
+  updateLatticeCoordinates(2 * delta);
 );
 </script>
 
@@ -231,6 +235,9 @@ if(switchedToLattice,
 
 <script id='cskeydown' type='text/x-cindyscript'>
 runningPhysics = not(runningPhysics);
+if(not(runningPhysics),
+  latticeVelocities = 0 * latticeCoordinates;
+);
 </script>
 
 <canvas id="CSCanvas" align="left" valign="top" width="1024" height="768" style="border:1px solid #000000;"></canvas>
