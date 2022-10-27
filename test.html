@@ -133,13 +133,13 @@ updateLatticeCoordinates(delta) := (
 
 // ******************************************************************************************
 
-g = 7;
-m = 5;
+g = 6;
+m = 4;
 
-objectNames = ["Toyota Supra", "Nissan Skyline", "Mitsubishi Eclipse", "Mitsubishi Lancer Evolution", "Mazda RX-7", "Honda S2000", "Chevrolet Impala"];
-objectNamesShort = ["ts", "ns", "me", "mle", "mrx7", "hs", "ci"];
-attributeNames = ["Wiki white", "before 1980", "Japanese", "5 doors", "has sunroof"];
-attributeNamesShort = ["w", "80", "j", "5", "s"];
+objectNames = ["Macrosoft Boundary", "Orange Cheesebook", "SilverStar Kilo", "Fan Blade", "Four Stars Universe", "Tree-3 Tinbook"];
+objectNamesShort = ["MB", "OC", "SSK", "FB", "FSU", "T3T"];
+attributeNames = ["CD drive", "number pad", "HDMI port", "biometric ID"];
+attributeNamesShort = ["CD", "numpad", "HDMI", "bioID"];
 
 contextIncidences = [];
 
@@ -278,14 +278,13 @@ function createContext(g, m) {
 }
 
 function createCarContext() {
-  context = new Context(5);
-  context.addObject([1, 1, 1, 0, 1]);
-  context.addObject([1, 1, 1, 1, 0]);
-  context.addObject([0, 0, 1, 0, 0]);
-  context.addObject([0, 0, 1, 1, 0]);
-  context.addObject([1, 1, 1, 0, 0]);
-  context.addObject([0, 0, 1, 0, 1]);
-  context.addObject([0, 1, 0, 1, 0]);
+  context = new Context(4);
+  context.addObject([1, 0, 0, 1]);
+  context.addObject([1, 0, 1, 1]);
+  context.addObject([0, 1, 0, 1]);
+  context.addObject([0, 0, 1, 0]);
+  context.addObject([1, 1, 0, 1]);
+  context.addObject([1, 0, 1, 0]);
 
   cindy.evokeCS('contextIncidences = ' + JSON.stringify(context.incidences) + ';');
 }
